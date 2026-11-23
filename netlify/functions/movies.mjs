@@ -1,69 +1,4 @@
-import { movieCandidates } from '../../src/data/movie-candidates.js';
-
-async function loadMovie(candidate, token) {
-  const url = new URL(
-    `https://api.themoviedb.org/3/movie/${candidate.tmdbId}`,
-  );
-
-  url.searchParams.set('language', 'ko-KR');
-  url.searchParams.set('append_to_response', 'watch/providers');
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-    },
-    signal: AbortSignal.timeout(15000),
-  });
-
-  if (!response.ok) {
-    throw new Error(`TMDB 응답 오류: ${response.status}`);
-  }
-
-  const movie = await response.json();
-  const korea = movie['watch/providers']?.results?.KR;
-
-  // 한국의 구독형 제공처만 사용합니다.
-  // 대여·구매 상품은 포함하지 않습니다.
-  const providers = [
-    ...new Map(
-      (korea?.flatrate ?? []).map((provider) => [
-        provider.provider_id,
-        {
-          id: provider.provider_id,
-          name: provider.provider_name,
-          logoUrl: provider.logo_path
-            ? `https://image.tmdb.org/t/p/w92${provider.logo_path}`
-            : null,
-        },
-      ]),
-    ).values(),
-  ];
-
-  return {
-    id: movie.id,
-    title: movie.title,
-    overview: movie.overview,
-    runtime: movie.runtime,
-    releaseDate: movie.release_date,
-    rating: movie.vote_average,
-    voteCount: movie.vote_count,
-    genres: movie.genres,
-    posterUrl: movie.poster_path
-      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-      : null,
-
-    availability: {
-      region: 'KR',
-      subscriptionListed: providers.length > 0,
-      status: providers.length > 0 ? 'listed' : 'not_listed',
-      providers,
-      watchLink: korea?.link ?? null,
-      checkedAt: new Date().toISOString(),
-      source: 'TMDB / JustWatch',
-    },
-  };
-}
+import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(request) {
   if (request.method !== 'GET') {
@@ -73,52 +8,107 @@ export default async function handler(request) {
     );
   }
 
-  const token = process.env.TMDB_READ_TOKEN?.trim();
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SECRET_KEY?.trim();
 
-  if (!token) {
+  if (!url || !key) {
     return Response.json(
-      { message: '.env의 TMDB_READ_TOKEN을 확인해 주세요.' },
+      { message: '서버의 Supabase 환경 변수를 확인해 주세요.' },
       { status: 500 },
     );
   }
 
-  const results = await Promise.allSettled(
-    movieCandidates.map((candidate) =>
-      loadMovie(candidate, token),
-    ),
-  );
+  try {
+    const db = createClient(url, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
 
-  const movies = [];
-  const failedIds = [];
+    const { data, error } = await db
+      .from('movies')
+      .select('*, movie_tags(*)')
+      .order('id');
 
-  results.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      movies.push(result.value);
-    } else {
-      failedIds.push(movieCandidates[index].tmdbId);
+    if (error) {
+      console.error('영화 DB 조회 실패:', error.message, error.details);
+      return Response.json(
+        { message: '저장된 영화 정보를 가져오지 못했습니다.' },
+        { status: 502 },
+      );
     }
-  });
 
-  if (movies.length === 0) {
+    const movieTags = {};
+
+    const movies = (data ?? []).map((row) => {
+      const tags = Array.isArray(row.movie_tags)
+        ? row.movie_tags[0]
+        : row.movie_tags;
+
+      if (tags) {
+        movieTags[row.id] = {
+          reviewed: tags.reviewed,
+          reviewBasis: tags.review_basis,
+          experiences: tags.experiences,
+          avoids: tags.avoids,
+          reason: tags.reason,
+          contentReview: tags.content_review,
+        };
+      }
+
+      const providers = row.providers ?? [];
+
+      return {
+        id: row.id,
+        title: row.title,
+        overview: row.overview,
+        runtime: row.runtime,
+        releaseDate: row.release_date,
+        rating: Number(row.rating),
+        voteCount: row.vote_count,
+        genres: row.genres,
+        posterUrl: row.poster_url,
+
+        availability: {
+          region: 'KR',
+          subscriptionListed: providers.length > 0,
+          status: providers.length > 0
+            ? 'listed'
+            : 'not_listed',
+          providers,
+          watchLink: row.watch_link,
+          checkedAt: row.availability_checked_at,
+          source: 'TMDB / JustWatch',
+        },
+      };
+    });
+
     return Response.json(
       {
-        message: '영화 정보를 가져오지 못했습니다.',
-        failedIds,
+        dataSource: 'supabase',
+        movies,
+        movieTags,
+        total: movies.length,
+        subscriptionListedCount: movies.filter(
+          (movie) => movie.availability.subscriptionListed,
+        ).length,
+        attribution: {
+          movieData: 'TMDB',
+          watchProviders: 'JustWatch',
+        },
       },
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      },
+    );
+  } catch {
+    return Response.json(
+      { message: '영화 DB 연결에 실패했습니다.' },
       { status: 502 },
     );
   }
-
-  return Response.json({
-    movies,
-    total: movies.length,
-    subscriptionListedCount: movies.filter(
-      (movie) => movie.availability.subscriptionListed,
-    ).length,
-    failedIds,
-    attribution: {
-      movieData: 'TMDB',
-      watchProviders: 'JustWatch',
-    },
-  });
 }
