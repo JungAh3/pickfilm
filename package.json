@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "auth:setup-naver": "node scripts/naver-auth.mjs setup",
+    "auth:check": "node scripts/naver-auth.mjs check"
   },
   "devDependencies": {
     "netlify-cli": "^27.17.0",

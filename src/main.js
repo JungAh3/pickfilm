@@ -1,10 +1,10 @@
 import { setupCredits } from './credits.js';
+import { setupAuth } from './auth.js';
 import {
   setupProviderFilter,
   readSelectedProviders,
 } from './provider-filter.js';
 import { showRecommendations } from './recommendation-view.js';
-import './style.css';
 
 const experiences = [
   {
@@ -68,6 +68,7 @@ document.querySelector('#app').innerHTML = `
       PICKFILM
     </a>
     <p class="header-caption">고민은 짧게, 감상은 길게.</p>
+    <div id="account"></div>
   </header>
 
   <main class="page">
@@ -322,3 +323,4 @@ form.addEventListener('submit', async (event) => {
 
 setupProviderFilter();
 setupCredits();
+setupAuth(document.querySelector('#account'));
