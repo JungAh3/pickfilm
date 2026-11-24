@@ -28,3 +28,8 @@
   from = "/my-movies"
   to = "/index.html"
   status = 200
+
+[[redirects]]
+  from = "/recommendations"
+  to = "/index.html"
+  status = 200

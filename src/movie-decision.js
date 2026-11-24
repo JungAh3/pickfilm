@@ -1,17 +1,17 @@
 import { createOttBadges } from './ott-badges.js';
 import { createContentAdvice } from './content-advice.js';
 import { requestMovieSelections } from './movie-selections.js';
+import { blindValue } from './blind-movie.js';
+import { compareRankedMovies } from './recommendations.js';
 
-export function attachDecisionControls(container, movies, getSession) {
+export function attachDecisionControls(container, movies, getSession, replaceMovie) {
   if (!movies.length) return;
 
   document.querySelector('#movie-detail-dialog')?.remove();
 
   const grid = container.querySelector('.catalog-grid');
-  const heading = container.querySelector('h2');
   const message = container.querySelector('.catalog-message');
 
-  const originalHeading = heading.textContent;
   const originalMessage = message.textContent;
 
   const dialog = document.createElement('dialog');
@@ -47,6 +47,12 @@ export function attachDecisionControls(container, movies, getSession) {
     return note;
   }
 
+  function detailButton(movie) {
+    const button = makeButton('', 'decision-secondary blind-stack', () => openDetails(movie));
+    button.append(blindValue('상세 보기', '작품 공개하고 상세 보기'));
+    return button;
+  }
+
   function saveDecision(movieId, userId) {
     const status = document.createElement('p');
     decision.append(status);
@@ -79,9 +85,14 @@ export function attachDecisionControls(container, movies, getSession) {
     decision.replaceChildren();
 
     const title = document.createElement('h3');
-    title.textContent = `오늘은 「${movie.title}」로 결정했어요!`;
+    const slot = Number(originalCards[movies.indexOf(movie)].dataset.slot);
+    title.append(blindValue(
+      `오늘은 「${movie.title}」로 결정했어요!`,
+      `오늘은 PICK ${slot + 1}로 결정했어요!`,
+    ));
 
     const text = document.createElement('p');
+    text.className = 'blind-reveal';
     text.textContent =
       '아래 링크에서 제공처를 확인하고 감상을 시작해 보세요.';
 
@@ -89,6 +100,7 @@ export function attachDecisionControls(container, movies, getSession) {
 
     if (movie.availability.watchLink) {
       const link = document.createElement('a');
+      link.className = 'blind-reveal';
       link.href = movie.availability.watchLink;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
@@ -182,47 +194,42 @@ export function attachDecisionControls(container, movies, getSession) {
 
     if (!body) return;
 
-    body.append(
-      makeButton('상세 보기', 'decision-secondary', () => {
-        openDetails(movie);
-      }),
-    );
+    body.append(detailButton(movie));
   });
 
   function showAllMovies() {
-    heading.textContent = originalHeading;
     message.textContent = originalMessage;
 
     grid.classList.remove('single-pick-grid');
     grid.replaceChildren(...originalCards);
 
     controls.replaceChildren(
-      makeButton('하나만 골라줘 ✨', 'decision-button', showOneMovie),
+      makeButton('하나만 골라줘 ✨', 'decision-button', () => showOneMovie()),
     );
 
     decision.hidden = true;
   }
 
-  function showOneMovie() {
-    const movie = movies[0];
+  function showOneMovie(movie = [...movies].sort(compareRankedMovies)[0], isReplacement = false) {
+    const original = originalCards[movies.indexOf(movie)];
 
-    heading.textContent = '오늘의 원픽은 이 영화!';
-    message.textContent =
-      '현재 추천 후보 중 선택한 조건의 종합 점수가 가장 높은 영화입니다. 동점이면 평가 수를 우선합니다.';
+    if (!isReplacement) {
+      message.textContent =
+        '현재 추천 후보 중 선택한 조건의 종합 점수가 가장 높은 영화입니다. 동점이면 평가 수를 우선합니다.';
+    }
 
-    // 기존 1순위 카드를 복제하고 버튼은 새로 연결합니다.
-    const card = originalCards[0].cloneNode(true);
-    card.querySelectorAll('button').forEach((button) => button.remove());
+    const card = original.cloneNode(true);
+    const watched = card.querySelector('.watched-button');
+    card.querySelectorAll('button:not(.watched-button)').forEach((button) => button.remove());
+    watched?.addEventListener('click', () => replaceMovie(Number(card.dataset.slot)));
 
     const rank = card.querySelector('.recommendation-rank');
-    if (rank) rank.textContent = '오늘의 PICK';
+    if (rank) rank.textContent += ' · 오늘의 원픽';
 
     const body = card.querySelector('.catalog-card-body');
 
     body.append(
-      makeButton('상세 보기', 'decision-secondary', () => {
-        openDetails(movie);
-      }),
+      detailButton(movie),
       automaticSaveNote(),
       makeButton('이 영화로 결정', 'decision-button', () => {
         confirmMovie(movie);
@@ -247,4 +254,5 @@ export function attachDecisionControls(container, movies, getSession) {
   }
 
   showAllMovies();
+  return showOneMovie;
 }

@@ -1,5 +1,6 @@
-import { movieTags } from './data/movie-tags.js';
-export function attachComparison(container, movies) {
+import { blindValue, movieCautions, movieMood } from './blind-movie.js';
+
+export function attachComparison(container, movies, slots, initiallyOpen = false) {
   if (movies.length < 2) return;
 
   const wrapper = document.createElement('section');
@@ -8,13 +9,13 @@ export function attachComparison(container, movies) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'decision-secondary';
-  button.textContent = `${movies.length}편 비교하기`;
-  button.setAttribute('aria-expanded', 'false');
+  button.textContent = initiallyOpen ? '비교표 접기' : `${movies.length}편 비교하기`;
+  button.setAttribute('aria-expanded', String(initiallyOpen));
   button.setAttribute('aria-controls', 'movie-comparison-panel');
 
   const panel = document.createElement('div');
   panel.id = 'movie-comparison-panel';
-  panel.hidden = true;
+  panel.hidden = !initiallyOpen;
 
   const scroll = document.createElement('div');
   scroll.className = 'comparison-scroll';
@@ -31,12 +32,17 @@ export function attachComparison(container, movies) {
   const head = document.createElement('thead');
   const headerRow = document.createElement('tr');
 
-  for (const text of ['비교 항목', ...movies.map((movie) => movie.title)]) {
+  const columnHeading = document.createElement('th');
+  columnHeading.scope = 'col';
+  columnHeading.textContent = '비교 항목';
+  headerRow.append(columnHeading);
+
+  movies.forEach((movie, index) => {
     const cell = document.createElement('th');
     cell.scope = 'col';
-    cell.textContent = text;
+    cell.append(blindValue(movie.title, `PICK ${slots[index] + 1}`));
     headerRow.append(cell);
-  }
+  });
 
   head.append(headerRow);
 
@@ -57,47 +63,30 @@ export function attachComparison(container, movies) {
       'TMDB 평점',
       (movie) =>
         `${Number(movie.rating).toFixed(1)}/10`,
+      'blind-reveal',
     ],
     [
       '평가 수',
       (movie) =>
         `${Number(movie.voteCount).toLocaleString('ko-KR')}개`,
+      'blind-reveal',
     ],
     [
       '추천 이유',
-      (movie) => movie.reasons.join('\n'),
+      (movie) => blindValue(movie.reasons.join('\n'), movie.blindReasons.join('\n')),
     ],
+    ['분위기', movieMood, 'blind-only'],
     [
         '회피 요소',
-        (movie) => {
-            const labels = {
-                violence: '잔인한 묘사',
-                horror: '공포·위협',
-                slow: '느린 전개',
-                heavy: '무거운 분위기',
-            };
-
-            const states = {
-                present: '있음',
-                absent: '설정 기준에 해당하지 않음',
-                unknown: '미확인',
-            };
-
-            const avoids = movieTags[movie.id]?.avoids ?? {};
-
-            return Object.entries(labels)
-                .map(([key, label]) =>
-                    `${label}: ${states[avoids[key] ?? 'unknown']}`,
-                )
-                .join('\n');
-        },
+        (movie) => movieCautions(movie).join('\n'),
     ],
   ];
 
   const body = document.createElement('tbody');
 
-  for (const [label, getValue] of rows) {
+  for (const [label, getValue, className] of rows) {
     const row = document.createElement('tr');
+    if (className) row.className = className;
 
     const rowHeading = document.createElement('th');
     rowHeading.scope = 'row';
@@ -106,7 +95,7 @@ export function attachComparison(container, movies) {
 
     for (const movie of movies) {
       const cell = document.createElement('td');
-      cell.textContent = getValue(movie);
+      cell.append(getValue(movie));
       row.append(cell);
     }
 

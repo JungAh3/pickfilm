@@ -4,7 +4,8 @@ import {
   setupProviderFilter,
   readSelectedProviders,
 } from './provider-filter.js';
-import { showRecommendations } from './recommendation-view.js';
+import { readRecommendation, saveRecommendation } from './recommendation-state.js';
+import { blindSwitch } from './blind-movie.js';
 
 const experiences = [
   {
@@ -221,15 +222,18 @@ document.querySelector('#app').innerHTML = `
           </p>
         </div>
 
-        <div class="form-actions">
-          <button class="reset-button" type="reset">초기화</button>
-          <button class="primary-button" type="submit">
-            영화 최대 3편 추천받기 <span aria-hidden="true">→</span>
-          </button>
+        <div class="recommendation-actions">
+          ${blindSwitch('name="blind"', '<small>제목과 포스터를 가리고, 분위기와 추천 이유로 먼저 골라요.</small>')}
+          <div class="form-actions">
+            <button class="reset-button" type="reset">초기화</button>
+            <button class="primary-button" type="submit">
+              영화 3편 추천받기 <span aria-hidden="true">→</span>
+            </button>
+          </div>
         </div>
       </section>
 
-      <div id="form-result" class="form-result" role="status" hidden></div>
+      <p id="selection-error" class="catalog-message" role="alert" hidden></p>
     </form>
 
     <footer class="page-footer">
@@ -242,7 +246,7 @@ document.querySelector('#app').innerHTML = `
 
 const form = document.querySelector('#preferences-form');
 const summary = document.querySelector('#selection-summary');
-const result = document.querySelector('#form-result');
+const selectionError = document.querySelector('#selection-error');
 
 function getPreferences() {
   const data = new FormData(form);
@@ -296,19 +300,39 @@ function updateSummary() {
   ].join(' / ');
 }
 
-form.addEventListener('change', () => {
+function restoreConditions() {
+  const state = readRecommendation();
+  if (!state) return;
+  const { preferences } = state;
+  form.elements.blind.checked = state.blind;
+  for (const control of form.querySelectorAll('input[type="radio"], input[name="avoid"]')) {
+    if (control.name === 'avoid') {
+      control.checked = preferences.avoid.includes(control.value);
+    } else {
+      const value = preferences[control.name] ?? 'any';
+      control.checked = control.value === String(value);
+    }
+  }
+  restoreProviders();
   updateSummary();
-  result.hidden = true;
-});
+}
 
+function restoreProviders() {
+  const ids = readRecommendation()?.preferences.providerIds;
+  if (!ids) return;
+  for (const input of form.querySelectorAll('input[name="providers"]')) {
+    input.checked = input.value.split(',').some((id) => ids.includes(id));
+  }
+}
+
+form.addEventListener('change', updateSummary);
 form.addEventListener('reset', () => {
-  result.hidden = true;
-
   // 브라우저가 입력값을 초기화한 뒤 요약을 갱신합니다.
+  restorePendingProviders = false;
   requestAnimationFrame(updateSummary);
 });
 
-form.addEventListener('submit', async (event) => {
+form.addEventListener('submit', (event) => {
   event.preventDefault();
 
   if (!form.reportValidity()) return;
@@ -318,9 +342,26 @@ form.addEventListener('submit', async (event) => {
     providerIds: readSelectedProviders(form),
   };
 
-  await showRecommendations(preferences, false, getSession);
+  try {
+    saveRecommendation({ preferences, blind: form.elements.blind.checked });
+    window.location.assign('/recommendations');
+  } catch {
+    selectionError.hidden = false;
+    selectionError.textContent = '이 탭에서 추천 조건을 저장하지 못했습니다. 브라우저 저장 설정을 확인해 주세요.';
+  }
 });
 
-setupProviderFilter();
+let restorePendingProviders = true;
+restoreConditions();
+const submitButton = form.querySelector('button[type="submit"]');
+submitButton.disabled = true;
+setupProviderFilter().finally(() => {
+  if (restorePendingProviders) restoreProviders();
+  submitButton.disabled = false;
+  updateSummary();
+});
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) restoreConditions();
+});
 setupCredits();
-const getSession = setupAuth(document.querySelector('#account'));
+setupAuth(document.querySelector('#account'));

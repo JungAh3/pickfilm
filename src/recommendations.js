@@ -6,13 +6,17 @@ const genreIds = {
   drama: 18,
 };
 
-const experienceLabels = {
+export const experienceLabels = {
   refresh: '기분 전환',
   comfort: '위로',
   laugh: '웃음',
   thrill: '몰입과 긴장감',
   linger: '깊은 여운',
 };
+
+export function compareRankedMovies(a, b) {
+  return b.score - a.score || b.voteCount - a.voteCount || a.id - b.id;
+}
 
 export function recommendMovies(
   movies,
@@ -105,7 +109,6 @@ export function recommendMovies(
         `원하는 경험: ${
           experienceLabels[preferences.experience]
         }`,
-        tags.reason,
       ];
 
       if (genreMatches) {
@@ -137,15 +140,11 @@ export function recommendMovies(
       return {
         ...movie,
         score,
-        reasons: reasons.filter(Boolean),
+        reasons: [reasons[0], tags.reason, ...reasons.slice(1)].filter(Boolean),
+        blindReasons: reasons,
       };
     })
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        b.voteCount - a.voteCount ||
-        a.id - b.id,
-    );
+    .sort(compareRankedMovies);
 
   return {
     movies: ranked.slice(0, 3),

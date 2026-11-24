@@ -639,6 +639,72 @@ h2 {
   flex-shrink: 0;
 }
 
+.recommendation-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.blind-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  position: relative;
+  color: #192233;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.blind-option input {
+  position: absolute;
+  width: 44px;
+  height: 24px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.blind-switch-track {
+  position: relative;
+  flex: 0 0 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #747d8d;
+}
+
+.blind-switch-track::after {
+  position: absolute;
+  inset: 3px auto 3px 3px;
+  width: 18px;
+  border-radius: 50%;
+  background: white;
+  content: '';
+}
+
+.blind-option input:checked + .blind-switch-track {
+  background: var(--accent-dark);
+}
+
+.blind-option input:checked + .blind-switch-track::after {
+  transform: translateX(20px);
+}
+
+.blind-option input:focus-visible + .blind-switch-track {
+  outline: 3px solid #192233;
+  outline-offset: 3px;
+}
+
+.blind-option strong {
+  display: inline-block;
+  line-height: 24px;
+}
+
+.blind-option small {
+  display: block;
+  margin-top: 4px;
+  color: #5c6473;
+  line-height: 1.5;
+}
+
 .reset-button {
   padding: 10px 0;
   border: 0;
@@ -846,6 +912,90 @@ a:focus-visible {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 20px;
+}
+
+.recommendation-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.recommendation-page {
+  padding-top: 24px;
+}
+
+.recommendation-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recommendation-toolbar h1 {
+  margin: 0;
+  font-size: clamp(21px, 4vw, 32px);
+  line-height: 1.25;
+}
+
+.edit-conditions {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.recommendation-page #form-result > .catalog-message:first-child {
+  margin-top: 0;
+}
+
+#form-result:not([data-blind]) .blind-only,
+#form-result[data-blind] .blind-reveal {
+  display: none;
+}
+
+.blind-stack,
+#form-result .catalog-card-body > button.blind-stack {
+  display: grid;
+}
+
+.blind-stack > * {
+  grid-area: 1 / 1;
+}
+
+#form-result:not([data-blind]) .blind-stack > .blind-only,
+#form-result[data-blind] .blind-stack > .blind-reveal {
+  display: revert;
+  visibility: hidden;
+}
+
+.recommendation-poster {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: #eceef2;
+}
+
+#form-result[data-blind] .poster-image,
+#form-result[data-blind] .card-provider-link {
+  visibility: hidden;
+}
+
+#form-result[data-blind] .recommendation-poster {
+  background: #31394b;
+}
+
+.watched-button {
+  margin: 4px 8px 4px 0;
+}
+
+@media (min-width: 601px) {
+  .recommendation-grid:not(.single-pick-grid) {
+    grid-template-columns: repeat(var(--pick-columns), minmax(0, 1fr));
+  }
+
+  .recommendation-grid:not(.single-pick-grid) > .catalog-card {
+    grid-column: var(--pick-column);
+  }
 }
 
 .catalog-card {
@@ -1231,6 +1381,18 @@ button:disabled {
   outline-offset: 3px;
 }
 @media (max-width: 600px) {
+  .recommendation-page {
+    padding-top: 18px;
+  }
+
+  .recommendation-toolbar .recommendation-heading {
+    gap: 8px;
+  }
+
+  .edit-conditions {
+    padding: 10px 12px;
+  }
+
   #form-result {
     padding: 16px;
   }
@@ -1252,12 +1414,11 @@ button:disabled {
   }
 
   /* 포스터만 축소합니다. OTT 아이콘에는 적용하지 않습니다. */
-  #form-result .catalog-card > img {
+  #form-result .recommendation-poster {
     width: 88px;
     height: 132px;
     margin: 0;
     border-radius: 8px;
-    object-fit: cover;
   }
 
   #form-result .catalog-card-body {
