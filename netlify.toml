@@ -23,3 +23,8 @@
   from = "/auth/callback"
   to = "/index.html"
   status = 200
+
+[[redirects]]
+  from = "/my-movies"
+  to = "/index.html"
+  status = 200

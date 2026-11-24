@@ -1,7 +1,10 @@
 import './style.css';
 
 const path = window.location.pathname.replace(/\/$/, '');
-if (['/login', '/register', '/auth/callback'].includes(path)) {
+if (path === '/my-movies') {
+  const { showMyMovies } = await import('./my-movies.js');
+  showMyMovies(document.querySelector('#app'));
+} else if (['/login', '/register', '/auth/callback'].includes(path)) {
   const { showAuthPage } = await import('./auth.js');
   showAuthPage(document.querySelector('#app'), path);
 } else {

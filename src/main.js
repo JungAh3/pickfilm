@@ -318,9 +318,9 @@ form.addEventListener('submit', async (event) => {
     providerIds: readSelectedProviders(form),
   };
 
-  await showRecommendations(preferences);
+  await showRecommendations(preferences, false, getSession);
 });
 
 setupProviderFilter();
 setupCredits();
-setupAuth(document.querySelector('#account'));
+const getSession = setupAuth(document.querySelector('#account'));

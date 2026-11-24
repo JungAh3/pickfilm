@@ -47,21 +47,25 @@ function passwordField(name, label, autocomplete) {
   `;
 }
 
-export function setupAuth(container) {
+export function setupAuth(container, onUserChange) {
   const client = createAuthClient();
+  let currentSession = null;
   container.innerHTML = `
     ${accountLinks()}
     <span class="account-name" aria-live="polite"></span>
+    <a class="account-logout" href="/my-movies" hidden>내가 고른 영화</a>
     <button type="button" class="account-logout" hidden>로그아웃</button>
     <p class="account-status" role="status">로그인 상태 확인 중…</p>
   `;
   const links = container.querySelector('nav');
   const nameLabel = container.querySelector('.account-name');
+  const myMovies = container.querySelector('a[href="/my-movies"]');
   const logout = container.querySelector('button');
   const status = container.querySelector('p');
   if (!client) {
     status.textContent = configMessage;
-    return;
+    onUserChange?.(null);
+    return () => null;
   }
 
   const { auth } = client;
@@ -96,8 +100,11 @@ export function setupAuth(container) {
   }
 
   auth.onAuthStateChange((event, session) => {
+    currentSession = session;
     links.hidden = Boolean(session);
     logout.hidden = !session;
+    myMovies.hidden = !session;
+    document.body.classList.toggle('signed-in', Boolean(session));
     if (session || event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
       status.textContent = '';
     }
@@ -106,6 +113,9 @@ export function setupAuth(container) {
       clearName();
       userId = nextUserId;
       if (userId) loadName(userId);
+      onUserChange?.(session);
+    } else if (event === 'INITIAL_SESSION' && !userId) {
+      onUserChange?.(null);
     }
   });
 
@@ -125,6 +135,7 @@ export function setupAuth(container) {
       logout.disabled = false;
     }
   });
+  return () => currentSession;
 }
 
 export function showAuthPage(container, path) {

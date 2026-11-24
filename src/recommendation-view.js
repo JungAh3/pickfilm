@@ -89,6 +89,7 @@ function createMovieCard(movie, index) {
 export async function showRecommendations(
   preferences,
   recommendAgain = false,
+  getSession,
 ) {
   const preferencesKey = JSON.stringify({
     experience: preferences.experience,
@@ -162,7 +163,7 @@ export async function showRecommendations(
       '영화 정보: TMDB · 제공처 정보: JustWatch. 감상 경험은 PICKFILM의 초기 편집 기준이며, 실제 제공 여부는 시청 전에 확인해 주세요.';
 
     result.append(heading, message, grid, note);
-    attachDecisionControls(result, recommendation.movies);
+    attachDecisionControls(result, recommendation.movies, getSession);
     attachComparison(result, recommendation.movies);
     
     const moreControls = document.createElement('div');
@@ -176,7 +177,7 @@ export async function showRecommendations(
         moreButton.textContent = '다른 영화 추천받기';
 
         moreButton.addEventListener('click', () => {
-            showRecommendations(preferences, true);
+            showRecommendations(preferences, true, getSession);
         });
     } else if (shownMovieIds.size > 0) {
         message.textContent =
@@ -185,7 +186,7 @@ export async function showRecommendations(
         moreButton.textContent = '처음 추천부터 다시 보기';
 
         moreButton.addEventListener('click', () => {
-            showRecommendations(preferences);
+            showRecommendations(preferences, false, getSession);
         });
     } else {
         moreButton.textContent = '조건 다시 선택하기';

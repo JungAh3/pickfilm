@@ -85,6 +85,23 @@ a {
   font-size: 14px;
 }
 
+.decision-save-note {
+  display: none;
+}
+
+.signed-in .decision-save-note {
+  display: block;
+}
+
+.my-movies-page {
+  padding-block: 40px;
+}
+
+.my-movies-page > .decision-secondary {
+  display: inline-block;
+  margin-top: 16px;
+}
+
 .account-nav {
   justify-content: flex-end;
   gap: 4px;

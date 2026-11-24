@@ -1,7 +1,8 @@
 import { createOttBadges } from './ott-badges.js';
 import { createContentAdvice } from './content-advice.js';
+import { requestMovieSelections } from './movie-selections.js';
 
-export function attachDecisionControls(container, movies) {
+export function attachDecisionControls(container, movies, getSession) {
   if (!movies.length) return;
 
   document.querySelector('#movie-detail-dialog')?.remove();
@@ -28,6 +29,7 @@ export function attachDecisionControls(container, movies) {
   decision.setAttribute('role', 'status');
 
   container.append(controls, decision);
+  const pendingSaves = new Map();
 
   function makeButton(text, className, onClick) {
     const button = document.createElement('button');
@@ -36,6 +38,41 @@ export function attachDecisionControls(container, movies) {
     button.textContent = text;
     button.addEventListener('click', onClick);
     return button;
+  }
+
+  function automaticSaveNote() {
+    const note = document.createElement('p');
+    note.className = 'catalog-message decision-save-note';
+    note.textContent = '결정하면 내가 고른 영화에 자동으로 저장됩니다.';
+    return note;
+  }
+
+  function saveDecision(movieId, userId) {
+    const status = document.createElement('p');
+    decision.append(status);
+
+    async function save() {
+      const session = getSession?.();
+      if (session?.user.id !== userId) {
+        status.textContent = '선택한 계정으로 로그인한 상태에서 다시 저장해 주세요.';
+        return;
+      }
+      status.textContent = '내 목록에 저장하는 중…';
+      const key = `${userId}:${movieId}`;
+      if (!pendingSaves.has(key)) {
+        pendingSaves.set(key, requestMovieSelections(session, movieId)
+          .finally(() => pendingSaves.delete(key)));
+      }
+      try {
+        const { saved } = await pendingSaves.get(key);
+        status.textContent = saved ? '내 목록에 저장했어요.' : '이미 내 목록에 있는 영화예요.';
+      } catch {
+        status.textContent = '내 목록에 저장하지 못했어요. ';
+        status.append(makeButton('저장 다시 시도', 'decision-secondary', save));
+      }
+    }
+
+    void save();
   }
 
   function confirmMovie(movie) {
@@ -67,6 +104,8 @@ export function attachDecisionControls(container, movies) {
     );
 
     decision.hidden = false;
+    const userId = getSession?.()?.user.id;
+    if (userId) saveDecision(movie.id, userId);
 
     if (dialog.open) dialog.close();
 
@@ -127,6 +166,7 @@ export function attachDecisionControls(container, movies) {
     );
     content.insertBefore(createOttBadges(movie), actions);
     content.insertBefore(createContentAdvice(movie.id), actions);
+    content.insertBefore(automaticSaveNote(), actions);
     
     dialog.append(content);
     dialog.showModal();
@@ -183,6 +223,7 @@ export function attachDecisionControls(container, movies) {
       makeButton('상세 보기', 'decision-secondary', () => {
         openDetails(movie);
       }),
+      automaticSaveNote(),
       makeButton('이 영화로 결정', 'decision-button', () => {
         confirmMovie(movie);
       }),
