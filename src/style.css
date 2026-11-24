@@ -1132,31 +1132,115 @@ button:disabled {
   padding-left: 22px;
 }
 
-.decision-explanation,
-.decision-panel {
+.decision-explanation {
   padding: 20px;
   border-radius: 12px;
   background: #fff0f3;
 }
 
-.decision-panel {
+.pick-ticket {
+  max-width: 760px;
+  margin-inline: auto;
   margin-top: 24px;
+  overflow: hidden;
   border: 1px solid #ffcbd3;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 8px 22px rgb(100 41 52 / 10%);
+  color: #192233;
 }
 
-.decision-panel h3,
-.decision-panel p {
-  margin-bottom: 12px;
+#form-result .pick-ticket h2 {
+  margin: 0;
+  padding: 12px 20px;
+  background: var(--accent-light);
+  color: #a6263c;
+  font-size: 18px;
 }
 
-.decision-panel a {
-  color: #dc354d;
-  font-weight: 700;
+.pick-ticket-body {
+  display: grid;
+  grid-template-columns: minmax(90px, 148px) minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
 }
 
-.decision-panel .decision-secondary {
+.pick-ticket-poster {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f1edf0;
+  color: #555e6e;
+}
+
+.pick-ticket-poster img {
   display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pick-ticket-info {
+  min-width: 0;
+  padding-left: 20px;
+  border-left: 2px dashed #f1b3be;
+  overflow-wrap: anywhere;
+}
+
+.pick-ticket-info h3 {
+  margin: 0;
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.3;
+}
+
+.pick-ticket-metadata,
+.pick-ticket-reason {
+  margin: 8px 0 0;
+  color: #4f5868;
+}
+
+.pick-ticket-actions,
+.pick-ticket-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.pick-ticket-actions {
   margin-top: 16px;
+}
+
+.pick-ticket-feedback {
+  padding: 12px 20px;
+  border-top: 1px solid #ffcbd3;
+}
+
+.pick-ticket-feedback p {
+  margin: 0;
+}
+
+@media (max-width: 540px) {
+  .pick-ticket-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .pick-ticket-poster {
+    width: min(112px, 100%);
+    justify-self: center;
+  }
+
+  .pick-ticket-info {
+    padding: 14px 0 0;
+    border-top: 2px dashed #f1b3be;
+    border-left: 0;
+  }
 }
 .catalog-grid.single-pick-grid {
   grid-template-columns: minmax(0, 360px);

@@ -215,7 +215,7 @@ export async function showRecommendationPage(container) {
 
       result.append(message, grid, note);
       const activeMovies = active.map(({ movie }) => movie);
-      const showOneMovie = attachDecisionControls(result, activeMovies, getSession, replaceMovie);
+      const showOneMovie = attachDecisionControls(result, activeMovies, getSession, replaceMovie, preferences.experience);
       attachComparison(result, activeMovies, active.map(({ slot }) => slot), comparisonOpen);
 
       const moreControls = document.createElement('div');

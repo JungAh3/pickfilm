@@ -2,9 +2,23 @@ import { createOttBadges } from './ott-badges.js';
 import { createContentAdvice } from './content-advice.js';
 import { requestMovieSelections } from './movie-selections.js';
 import { blindValue } from './blind-movie.js';
-import { compareRankedMovies } from './recommendations.js';
+import { compareRankedMovies, experienceLabels } from './recommendations.js';
+import { movieTags } from './data/movie-tags.js';
 
-export function attachDecisionControls(container, movies, getSession, replaceMovie) {
+const pendingSaves = new Map();
+
+function watchPageUrl(value) {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && !url.username && !url.password
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function attachDecisionControls(container, movies, getSession, replaceMovie, experience) {
   if (!movies.length) return;
 
   document.querySelector('#movie-detail-dialog')?.remove();
@@ -23,13 +37,12 @@ export function attachDecisionControls(container, movies, getSession, replaceMov
   const controls = document.createElement('div');
   controls.className = 'decision-controls';
 
-  const decision = document.createElement('div');
-  decision.className = 'decision-panel';
+  const decision = document.createElement('section');
+  decision.className = 'decision-panel pick-ticket';
   decision.hidden = true;
-  decision.setAttribute('role', 'status');
+  decision.setAttribute('aria-labelledby', 'pick-ticket-title');
 
   container.append(controls, decision);
-  const pendingSaves = new Map();
 
   function makeButton(text, className, onClick) {
     const button = document.createElement('button');
@@ -54,10 +67,15 @@ export function attachDecisionControls(container, movies, getSession, replaceMov
   }
 
   function saveDecision(movieId, userId) {
+    const feedback = document.createElement('div');
+    feedback.className = 'pick-ticket-feedback';
     const status = document.createElement('p');
-    decision.append(status);
+    status.setAttribute('role', 'status');
+    feedback.append(status);
+    decision.append(feedback);
 
     async function save() {
+      feedback.querySelector('button')?.remove();
       const session = getSession?.();
       if (session?.user.id !== userId) {
         status.textContent = '선택한 계정으로 로그인한 상태에서 다시 저장해 주세요.';
@@ -71,10 +89,10 @@ export function attachDecisionControls(container, movies, getSession, replaceMov
       }
       try {
         const { saved } = await pendingSaves.get(key);
-        status.textContent = saved ? '내 목록에 저장했어요.' : '이미 내 목록에 있는 영화예요.';
+        status.textContent = saved ? '내가 고른 영화에 저장했어요' : '이미 내가 고른 영화에 저장된 작품이에요.';
       } catch {
-        status.textContent = '내 목록에 저장하지 못했어요. ';
-        status.append(makeButton('저장 다시 시도', 'decision-secondary', save));
+        status.textContent = '내가 고른 영화에 저장하지 못했어요.';
+        feedback.append(makeButton('저장 다시 시도', 'decision-secondary', save));
       }
     }
 
@@ -82,49 +100,67 @@ export function attachDecisionControls(container, movies, getSession, replaceMov
   }
 
   function confirmMovie(movie) {
-    decision.replaceChildren();
+    decision.innerHTML = `
+      <h2 id="pick-ticket-title" tabindex="-1">오늘의 픽 티켓</h2>
+      <div class="pick-ticket-body">
+        <div class="pick-ticket-poster"></div>
+        <div class="pick-ticket-info">
+          <h3></h3>
+          <p class="pick-ticket-metadata"></p>
+          <p class="pick-ticket-reason"></p>
+          <div class="pick-ticket-actions"></div>
+        </div>
+      </div>
+    `;
+    const poster = decision.querySelector('.pick-ticket-poster');
+    if (movie.posterUrl) {
+      const image = document.createElement('img');
+      image.src = movie.posterUrl;
+      image.alt = `${movie.title} 포스터`;
+      poster.append(image);
+    } else {
+      poster.textContent = '포스터 미확인';
+    }
 
-    const title = document.createElement('h3');
-    const slot = Number(originalCards[movies.indexOf(movie)].dataset.slot);
-    title.append(blindValue(
-      `오늘은 「${movie.title}」로 결정했어요!`,
-      `오늘은 PICK ${slot + 1}로 결정했어요!`,
-    ));
+    const runtime = movie.runtime > 0 ? `러닝타임 ${movie.runtime}분` : '러닝타임 미확인';
+    const experienceLabel = experienceLabels[experience];
+    const reason = movieTags[movie.id]?.reason || movie.reasons[0] || '';
+    decision.querySelector('h3').textContent = movie.title;
+    decision.querySelector('.pick-ticket-metadata').textContent =
+      [runtime, experienceLabel && `선택한 감상 경험: ${experienceLabel}`].filter(Boolean).join(' · ');
+    decision.querySelector('.pick-ticket-reason').textContent =
+      reason.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? reason;
 
-    const text = document.createElement('p');
-    text.className = 'blind-reveal';
-    text.textContent =
-      '아래 링크에서 제공처를 확인하고 감상을 시작해 보세요.';
-
-    decision.append(title, text);
-
-    if (movie.availability.watchLink) {
+    const actions = decision.querySelector('.pick-ticket-actions');
+    const watchUrl = watchPageUrl(movie.availability?.watchLink);
+    if (watchUrl) {
       const link = document.createElement('a');
-      link.className = 'blind-reveal';
-      link.href = movie.availability.watchLink;
+      link.className = 'decision-secondary';
+      link.href = watchUrl;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.textContent = '시청 제공처 확인 ↗';
-      decision.append(link);
+      actions.append(link);
     }
 
-    decision.append(
+    actions.append(
       makeButton('다시 고르기', 'decision-secondary', () => {
-        decision.hidden = true;
         showAllMovies();
+        controls.querySelector('button').focus({ preventScroll: true });
+        grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }),
     );
 
     decision.hidden = false;
-    const userId = getSession?.()?.user.id;
-    if (userId) saveDecision(movie.id, userId);
-
     if (dialog.open) dialog.close();
 
+    decision.querySelector('h2').focus({ preventScroll: true });
     decision.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
     });
+    const userId = getSession?.()?.user.id;
+    if (userId) saveDecision(movie.id, userId);
   }
 
   function openDetails(movie) {
