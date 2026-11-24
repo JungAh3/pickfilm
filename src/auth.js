@@ -4,7 +4,7 @@ const callbackPath = '/auth/callback';
 const configMessage = '로그인 설정을 확인해 주세요.';
 const callbackError = '인증을 완료하지 못했습니다. 가입 또는 로그인을 시작한 브라우저에서 다시 시도해 주세요.';
 
-function createAuth(detectSessionInUrl = true) {
+function createAuthClient(detectSessionInUrl = true) {
   const url = import.meta.env.VITE_SUPABASE_URL?.trim();
   const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
   if (!url || !key?.startsWith('sb_publishable_')) return null;
@@ -12,7 +12,7 @@ function createAuth(detectSessionInUrl = true) {
   try {
     return createClient(url, key, {
       auth: { flowType: 'pkce', detectSessionInUrl },
-    }).auth;
+    });
   } catch {
     return null;
   }
@@ -48,30 +48,71 @@ function passwordField(name, label, autocomplete) {
 }
 
 export function setupAuth(container) {
-  const auth = createAuth();
+  const client = createAuthClient();
   container.innerHTML = `
     ${accountLinks()}
+    <span class="account-name" aria-live="polite"></span>
     <button type="button" class="account-logout" hidden>로그아웃</button>
     <p class="account-status" role="status">로그인 상태 확인 중…</p>
   `;
   const links = container.querySelector('nav');
+  const nameLabel = container.querySelector('.account-name');
   const logout = container.querySelector('button');
   const status = container.querySelector('p');
-  if (!auth) {
+  if (!client) {
     status.textContent = configMessage;
     return;
+  }
+
+  const { auth } = client;
+  let userId = null;
+  let profileRequest;
+
+  function clearName() {
+    profileRequest?.abort();
+    nameLabel.textContent = '';
+  }
+
+  function loadName(id) {
+    const request = new AbortController();
+    profileRequest = request;
+    // Start the database request outside the auth callback's session lock.
+    setTimeout(async () => {
+      if (request.signal.aborted) return;
+      try {
+        const { data, error } = await client.from('profiles')
+          .select('name')
+          .eq('id', id)
+          .abortSignal(request.signal)
+          .maybeSingle();
+        const name = data?.name?.trim();
+        if (!request.signal.aborted && !error && name) {
+          nameLabel.textContent = `${name}님`;
+        }
+      } catch {
+        // Profile lookup failures leave the account controls usable.
+      }
+    }, 0);
   }
 
   auth.onAuthStateChange((event, session) => {
     links.hidden = Boolean(session);
     logout.hidden = !session;
     if (session || event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
-      status.textContent = session ? '로그인되었습니다.' : '';
+      status.textContent = '';
+    }
+    const nextUserId = session?.user.id ?? null;
+    if (nextUserId !== userId) {
+      clearName();
+      userId = nextUserId;
+      if (userId) loadName(userId);
     }
   });
 
   logout.addEventListener('click', async () => {
     logout.disabled = true;
+    const signingOutUserId = userId;
+    clearName();
     try {
       const { error } = await auth.signOut({ scope: 'local' });
       if (error) throw error;
@@ -79,6 +120,7 @@ export function setupAuth(container) {
       links.querySelector('a').focus();
     } catch {
       status.textContent = '로그아웃하지 못했습니다. 다시 시도해 주세요.';
+      if (userId && userId === signingOutUserId) loadName(userId);
     } finally {
       logout.disabled = false;
     }
@@ -145,7 +187,7 @@ export function showAuthPage(container, path) {
     </main>
   `;
 
-  const auth = createAuth(!isCallback);
+  const auth = createAuthClient(!isCallback)?.auth;
   const status = container.querySelector('.account-status');
   if (isCallback) {
     if (auth) void finishCallback(auth, status);
