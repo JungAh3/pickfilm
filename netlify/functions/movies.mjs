@@ -78,7 +78,6 @@ export default async function handler(request) {
             ? 'listed'
             : 'not_listed',
           providers,
-          watchLink: row.watch_link,
           checkedAt: row.availability_checked_at,
           source: 'TMDB / JustWatch',
         },

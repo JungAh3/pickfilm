@@ -54,12 +54,14 @@ export function setupAuth(container, onUserChange) {
     ${accountLinks()}
     <span class="account-name" aria-live="polite"></span>
     <a class="account-logout" href="/my-movies" hidden>내가 고른 영화</a>
+    <a class="account-logout" href="/watch-calendar" hidden>감상 캘린더</a>
     <button type="button" class="account-logout" hidden>로그아웃</button>
     <p class="account-status" role="status">로그인 상태 확인 중…</p>
   `;
   const links = container.querySelector('nav');
   const nameLabel = container.querySelector('.account-name');
   const myMovies = container.querySelector('a[href="/my-movies"]');
+  const calendar = container.querySelector('a[href="/watch-calendar"]');
   const logout = container.querySelector('button');
   const status = container.querySelector('p');
   if (!client) {
@@ -104,6 +106,7 @@ export function setupAuth(container, onUserChange) {
     links.hidden = Boolean(session);
     logout.hidden = !session;
     myMovies.hidden = !session;
+    calendar.hidden = !session;
     document.body.classList.toggle('signed-in', Boolean(session));
     if (session || event === 'INITIAL_SESSION' || event === 'SIGNED_OUT') {
       status.textContent = '';

@@ -84,7 +84,7 @@ export function attachDecisionControls(container, movies, getSession, replaceMov
       status.textContent = '내 목록에 저장하는 중…';
       const key = `${userId}:${movieId}`;
       if (!pendingSaves.has(key)) {
-        pendingSaves.set(key, requestMovieSelections(session, movieId)
+        pendingSaves.set(key, requestMovieSelections(session, movieId, undefined, experience)
           .finally(() => pendingSaves.delete(key)));
       }
       try {

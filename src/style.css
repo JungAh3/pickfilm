@@ -102,6 +102,161 @@ a {
   margin-top: 16px;
 }
 
+.watch-entry-link {
+  display: block;
+  width: fit-content;
+  margin-top: 12px;
+}
+
+.watch-calendar-page {
+  padding-block: 32px;
+}
+
+.watch-calendar-content {
+  max-width: 820px;
+}
+
+.watch-calendar-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.watch-calendar-toolbar h2 {
+  margin: 0;
+  font-size: clamp(16px, 4vw, 24px);
+  text-align: center;
+}
+
+.watch-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  text-align: center;
+}
+
+.watch-calendar-grid > span {
+  padding-block: 5px;
+  color: #535b69;
+  font-size: 13px;
+}
+
+.watch-calendar-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 3px;
+  min-height: clamp(62px, 12vw, 104px);
+  padding: 4px 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: white;
+  color: #192233;
+  font-size: 13px;
+}
+
+.watch-calendar-cell:hover,
+.watch-calendar-cell[aria-pressed="true"] {
+  border-color: var(--accent-dark);
+  background: var(--accent-light);
+}
+
+.watch-calendar-cell[aria-current="date"] {
+  font-weight: 800;
+  color: var(--accent-dark);
+}
+
+.watch-calendar-cell img {
+  display: block;
+  width: min(100%, 44px);
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.watch-calendar-count {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  padding: 1px 4px;
+  border-radius: 5px;
+  background: #192233;
+  color: white;
+  font-size: 10px;
+}
+
+.watch-calendar-date,
+.watch-entry-form {
+  margin-top: 18px;
+  padding: clamp(14px, 3vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+}
+
+.watch-calendar-date h2,
+.watch-entry-form h2 {
+  margin: 0 0 10px;
+}
+
+#date-entries article {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-block: 12px;
+  overflow-wrap: anywhere;
+}
+
+#date-entries article img {
+  width: 52px;
+  aspect-ratio: 2 / 3;
+  border-radius: 5px;
+  object-fit: cover;
+}
+
+#date-entries article h3,
+#date-entries article p {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+}
+
+#add-watch-entry {
+  margin-top: 12px;
+}
+
+.watch-entry-form:not([hidden]),
+.watch-entry-form label:not([hidden]) {
+  display: grid;
+  gap: 8px;
+}
+
+.watch-entry-form input,
+.watch-entry-form select,
+.watch-entry-form textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #b7bec9;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.watch-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 540px) {
+  .watch-calendar-toolbar button,
+  .watch-entry-actions button {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+}
+
 .account-nav {
   justify-content: flex-end;
   gap: 4px;

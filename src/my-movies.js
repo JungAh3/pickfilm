@@ -68,6 +68,13 @@ export function showMyMovies(container) {
         date.dateTime = selection.selected_at;
         date.textContent = `처음 고른 날 ${formatDate.format(new Date(date.dateTime))}`;
         body.append(title, date);
+        if (movie) {
+          const watch = document.createElement('a');
+          watch.className = 'decision-secondary watch-entry-link';
+          watch.href = `/watch-calendar?selection=${selection.movie_id}`;
+          watch.textContent = '감상 남기기';
+          body.append(watch);
+        }
         card.append(body);
         grid.append(card);
       }

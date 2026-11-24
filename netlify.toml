@@ -33,3 +33,8 @@
   from = "/recommendations"
   to = "/index.html"
   status = 200
+
+[[redirects]]
+  from = "/watch-calendar"
+  to = "/index.html"
+  status = 200
