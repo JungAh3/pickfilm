@@ -69,6 +69,15 @@ export async function setupProviderFilter() {
       (a, b) => a.name.localeCompare(b.name, 'ko'),
     );
 
+    const storageKey = 'pickfilm.default-provider-groups';
+    let defaults = [];
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey));
+      if (Array.isArray(saved)) defaults = saved;
+    } catch {
+      // The filter also works without browser storage.
+    }
+
     for (const group of sortedGroups) {
       const label = document.createElement('label');
       label.className = 'provider-option';
@@ -77,12 +86,32 @@ export async function setupProviderFilter() {
       checkbox.type = 'checkbox';
       checkbox.name = 'providers';
       checkbox.value = [...group.ids].join(',');
+      checkbox.dataset.group = group.name === 'Netflix' ? 'netflix' : String([...group.ids][0]);
+      checkbox.defaultChecked = defaults.includes(checkbox.dataset.group);
 
       const text = document.createElement('span');
       text.textContent = group.name;
 
       label.append(checkbox, text);
       options.append(label);
+    }
+
+    if (sortedGroups.length) {
+      const save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'decision-secondary';
+      save.textContent = '이 기기의 기본 OTT로 저장';
+      save.addEventListener('click', () => {
+        const keys = [...options.querySelectorAll('input:checked')].map(input => input.dataset.group);
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(keys));
+          for (const input of options.querySelectorAll('input')) input.defaultChecked = input.checked;
+          status.textContent = keys.length ? '선택한 OTT를 기본값으로 저장했어요.' : '전체 OTT를 기본값으로 저장했어요.';
+        } catch {
+          status.textContent = '기본값을 저장하지 못했어요. 현재 선택으로 추천받을 수 있어요.';
+        }
+      });
+      fieldset.insertBefore(save, status);
     }
 
     status.textContent = sortedGroups.length
