@@ -169,11 +169,17 @@ a {
   color: var(--accent-dark);
 }
 
+.day-covers {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
 .watch-calendar-cell img {
   display: block;
-  width: min(100%, 44px);
-  aspect-ratio: 2 / 3;
-  border-radius: 4px;
+  width: min(46%, 40px);
+  aspect-ratio: 1;
+  border-radius: 50%;
   object-fit: cover;
 }
 
@@ -1754,4 +1760,28 @@ button:disabled {
   display: block;
   width: 100px;
   height: auto;
+}
+
+.month-summary {
+  color: var(--accent-dark);
+  font-weight: 600;
+}
+
+@media (min-width: 960px) {
+  .watch-calendar-content:not([hidden]) {
+    display: grid;
+    max-width: 1140px;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    align-items: start;
+    gap: 20px;
+  }
+
+  .watch-calendar-month {
+    grid-row: span 2;
+  }
+
+  .watch-calendar-date, .watch-entry-form {
+    grid-column: 2;
+    margin-top: 0;
+  }
 }
