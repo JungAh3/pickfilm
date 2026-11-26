@@ -42,6 +42,7 @@ export function showWatchCalendar(container) {
             <h2 id="calendar-month" aria-live="polite"></h2>
             <button type="button" class="decision-secondary" data-month="1">다음 달</button>
           </div>
+          <p id="month-summary" class="month-summary"></p>
           <div class="watch-calendar-grid" aria-hidden="true">
             ${['일', '월', '화', '수', '목', '금', '토'].map(day => `<span>${day}</span>`).join('')}
           </div>
@@ -111,6 +112,7 @@ export function showWatchCalendar(container) {
     month = today.slice(0, 7);
     content.hidden = true;
     days.replaceChildren();
+    find('#month-summary').textContent = '';
     dateEntries.replaceChildren();
     datePanel.hidden = true;
     if (!session) {
@@ -172,6 +174,7 @@ export function showWatchCalendar(container) {
     const [year, number] = month.split('-').map(Number);
     find('#calendar-month').textContent = `${year}년 ${number}월`;
     days.replaceChildren();
+    find('#month-summary').textContent = '';
     dateEntries.replaceChildren();
     datePanel.hidden = true;
     entriesByDate = new Map();
@@ -185,6 +188,11 @@ export function showWatchCalendar(container) {
         group.push(entry);
         entriesByDate.set(entry.watched_on, group);
       }
+      const ratings = entries.filter(entry => entry.rating != null).map(entry => Number(entry.rating));
+      const average = ratings.length
+        ? (ratings.reduce((total, rating) => total + rating, 0) / ratings.length).toFixed(1)
+        : null;
+      find('#month-summary').textContent = `감상 기록 ${entries.length}편 · 관람일 ${entriesByDate.size}일 · ${average === null ? '별점 없음' : '평균 별점 ' + average + '점'}`;
       status.textContent = entries.length ? '' : '이 달에는 아직 감상 기록이 없어요.';
       renderDays();
       renderDate();
@@ -215,13 +223,19 @@ export function showWatchCalendar(container) {
       cell.setAttribute('aria-label', `${year}년 ${number}월 ${day}일${entries.length ? `, ${entries.length}편` : ''}`);
       cell.setAttribute('aria-pressed', String(date === selectedDate));
       if (date === today) cell.setAttribute('aria-current', 'date');
-      const featured = entries.find(entry => catalog.get(String(entry.movie_id))?.posterUrl);
-      const image = featured && poster(catalog.get(String(featured.movie_id)), true);
-      if (image) cell.append(image);
-      if (entries.length > 1 || (entries.length && !image)) {
+      const covers = document.createElement('span');
+      covers.className = 'day-covers';
+      for (const entry of entries) {
+        const image = poster(catalog.get(String(entry.movie_id)), true);
+        if (image) covers.append(image);
+        if (covers.childElementCount === 2) break;
+      }
+      if (covers.childElementCount) cell.append(covers);
+      const remaining = entries.length - covers.childElementCount;
+      if (remaining) {
         const count = document.createElement('span');
         count.className = 'watch-calendar-count';
-        count.textContent = image ? `+${entries.length - 1}` : `${entries.length}편`;
+        count.textContent = covers.childElementCount ? `+${remaining}` : `${remaining}편`;
         cell.append(count);
       }
       days.append(cell);
@@ -239,7 +253,9 @@ export function showWatchCalendar(container) {
   function renderDate() {
     datePanel.hidden = !selectedDate;
     if (!selectedDate) return;
-    find('#calendar-date').textContent = selectedDate;
+    find('#calendar-date').textContent = new Intl.DateTimeFormat('ko-KR', {
+      dateStyle: 'full', timeZone: 'UTC',
+    }).format(new Date(selectedDate + 'T00:00:00Z'));
     dateEntries.replaceChildren();
     const entries = entriesByDate.get(selectedDate) ?? [];
     if (!entries.length) dateEntries.textContent = '이 날의 감상 기록이 없어요.';
