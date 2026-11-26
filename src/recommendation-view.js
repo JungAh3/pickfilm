@@ -143,6 +143,9 @@ export async function showRecommendationPage(container) {
   try {
     const movies = await loadMovies();
     const shownMovieIds = new Set(state.shownMovieIds);
+    const coverage = preferences.avoid?.length
+      ? recommendMovies(movies, preferences, movieTags)
+      : null;
     let slots;
 
     function persistSlots() {
@@ -242,11 +245,11 @@ export async function showRecommendationPage(container) {
       moreControls.append(moreButton);
       result.append(moreControls);
 
-      if ((preferences.avoid ?? []).length) {
+      if (coverage) {
         const warning = document.createElement('p');
         warning.className = 'catalog-message';
         warning.textContent =
-          '선택한 회피 요소가 설정 기준에 해당하지 않는 것으로 검토된 영화만 추천합니다. 미확인 항목이 있는 영화도 제외합니다. 관람 안내 기반 분류이며 개인의 체감과 다를 수 있습니다.';
+          `OTT·시간·감상 경험 조건에 맞는 후보 ${coverage.reviewCandidateCount}편 중 선택한 회피 항목을 모두 확인한 영화는 ${coverage.reviewKnownCount}편입니다. 해당 요소가 있거나 미확인인 영화는 제외합니다.`;
         result.append(warning);
       }
       if (replacedSlot !== undefined) {

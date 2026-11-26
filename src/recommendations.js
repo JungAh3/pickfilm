@@ -32,6 +32,8 @@ export function recommendMovies(
 
   const selectedGenreId = genreIds[preferences.genre];
 
+  let reviewCandidateCount = 0;
+  let reviewKnownCount = 0;
   const ranked = movies
     .filter((movie) => {
       const tags = tagsById[movie.id];
@@ -56,13 +58,13 @@ export function recommendMovies(
         if (movie.runtime > preferences.maxRuntime) return false;
       }
 
-      for (const avoid of preferences.avoid ?? []) {
-        if (tags.avoids?.[avoid] !== 'absent') return false;
+      if (!((tags.experiences?.[preferences.experience] ?? 0) > 0)) return false;
+      const states = (preferences.avoid ?? []).map(key => tags.avoids?.[key]);
+      if (states.length) {
+        reviewCandidateCount++;
+        if (states.every(state => state === 'present' || state === 'absent')) reviewKnownCount++;
       }
-
-      return (
-        (tags.experiences?.[preferences.experience] ?? 0) > 0
-      );
+      return states.every(state => state === 'absent');
     })
     .map((movie) => {
       const tags = tagsById[movie.id];
@@ -148,6 +150,8 @@ export function recommendMovies(
 
   return {
     movies: ranked.slice(0, 3),
+    reviewCandidateCount,
+    reviewKnownCount,
     eligibleCount: ranked.length,
     message: ranked.length === 0
       ? '선택한 OTT와 감상 조건에 맞는 영화가 현재 후보에 없습니다.'
